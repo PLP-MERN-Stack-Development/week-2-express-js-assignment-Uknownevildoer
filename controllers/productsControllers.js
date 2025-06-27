@@ -1,76 +1,8 @@
-// server.js - Starter Express server for Week 2 assignment
-
-// Import required modules
-const express = require('express');
-const bodyParser = require('body-parser');
-const { v4: uuidv4 } = require('uuid');
-require('dotenv').config();
-
-// Initialize Express app
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-// Middleware setup
-app.use(bodyParser.json());
-
-//logging middleware
-app.use((req, res, next) => {
-  const time = new Date().toISOString();
-  console.log(`[${time}] ${req.method} ${req.url}`);
-  next(); 
-});
-
-//authentication middleware
-const API_KEY = process.env.API_KEY; 
-
-const authMiddleware = (req, res, next) => {
-  const userKey = req.headers['authorization']; 
-
-  if (userKey !== API_KEY) {
-    return res.status(401).json({ success: false, msg: 'Unauthorized: Invalid API key' });
-  }
-  next(); 
-};
-
-
-// Sample in-memory products database
-let products = [
-  {
-    id: '1',
-    name: 'Laptop',
-    description: 'High-performance laptop with 16GB RAM',
-    price: 1200,
-    category: 'electronics',
-    inStock: true
-  },
-  {
-    id: '2',
-    name: 'Smartphone',
-    description: 'Latest model with 128GB storage',
-    price: 800,
-    category: 'electronics',
-    inStock: true
-  },
-  {
-    id: '3',
-    name: 'Coffee Maker',
-    description: 'Programmable coffee maker with timer',
-    price: 50,
-    category: 'kitchen',
-    inStock: false
-  }
-];
-
-// Root route
-app.get('/', (req, res) => {
-  res.send('Welcome to the Product API! Go to /api/products to see all products.');
-});
-
-
-app.get('/api/products', (req, res) => {
+const data = require('../data/products')
+const getProducts =  (req, res) => {
   let { search, category, maxPrice, inStock, page = 1, limit = 5 } = req.query;
 
-  let result = [...products];
+  let result = [...data.products];
 
   // Search by name
   if (search) {
@@ -111,18 +43,18 @@ app.get('/api/products', (req, res) => {
     limit,
     data: paginated
   });
-});
+};
 
 
-app.get('/api/products/:id',(req,res)=>{
+const  getproduct = (req,res)=>{
   const {id} = req.params
   const product = products.find((product)=>product.id === id)
   if(!product){
     return res.status(404).send('product not found')
   }
   res.json(product)
-})
-app.post('/api/products',authMiddleware,(req,res)=>{
+}
+const createProduct = (req,res)=>{
   const { name, description, price, category, inStock } = req.body
   if(!name || !description || price== null || !category || inStock == null){
     return res.status(400).json({success: false, msg: 'Please provide all product details'})
@@ -137,8 +69,8 @@ app.post('/api/products',authMiddleware,(req,res)=>{
   };
   products.push(newProduct);
   res.status(201).json({success: true, data: products});
-}) 
-app.put('/api/products/:id',(req,res)=>{
+}
+const updateProducts = (req,res)=>{
   const {id}= req.params
   const { name, description, price, category, inStock}= req.body
 
@@ -153,25 +85,23 @@ app.put('/api/products/:id',(req,res)=>{
   if (inStock !== undefined) product.inStock = inStock;
 
   res.status(200).json({success: true, data: product})
-})
-app.delete('/api/products/:id',authMiddleware, (req, res) => {
+}
+const deleteProduct =  (req, res) => {
   const { id } = req.params;
-  const product = products.find((product) => product.id === id);
+  const product = data.products.find((product) => product.id === id);
 
   if (!product) {
     return res.status(404).json({ success: false, msg: `No product with id ${id}` });
   }
 
-  products = products.filter((product) => product.id !== id); // update original array
+  data.products = data.products.filter((product) => product.id !== id); // update original array
+  return res.status(200).json({ success: true, data: data.products });
+};
 
-  return res.status(200).json({ success: true, data: products });
-});
-
-
-// Start the server
-app.listen(3000, () => {
-  console.log(`Server is running on http://localhost:3000...`);
-});
-
-// Export the app for testing purposes
-module.exports = app; 
+module.exports = {
+    getProducts,
+    getproduct,
+    createProduct,
+    updateProducts,
+    deleteProduct
+}
